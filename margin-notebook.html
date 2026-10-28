@@ -1458,7 +1458,7 @@ const PROV = {
   openai: { name: "ChatGPT", model: "gpt-6-luna", key: true, hint: "Get a key at platform.openai.com → API keys. Billing is separate from ChatGPT Plus." },
   gemini: { name: "Gemini", model: "gemini-3.6-flash", key: true, hint: "Get a free key at aistudio.google.com → Get API key." },
   compat: { name: "AI", model: "", key: true, base: "https://openrouter.ai/api/v1", hint: "Any server that speaks the OpenAI chat API. Use its base URL, ending in /v1." },
-  ollama: { name: "Ollama", model: "", key: false, base: "http://localhost:11434", hint: "Install Ollama, pull a model, and start it with OLLAMA_ORIGINS=* so this page may connect." },
+  ollama: { name: "Ollama", model: "", key: false, base: "http://localhost:11434", hint: "Install Ollama, pull a model, set OLLAMA_ORIGINS=" + (location.protocol === "file:" ? "*" : location.origin) + " and restart Ollama so this page may connect. The README has the exact steps for your system." },
 };
 const LSAI = "margin.ai.v1";
 function aiConf() { try { return JSON.parse(localStorage.getItem(LSAI) || "{}"); } catch (e) { return {}; } }

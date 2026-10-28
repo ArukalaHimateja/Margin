@@ -1,14 +1,23 @@
-# Margin: a personal notebook
+# Margin
 
-Margin is a simple notes app in the style of Notion. You get pages inside pages, checklists, headings, a table of contents, and an AI assistant that can summarize, draft, and rewrite your notes.
+**A single-file, local-first Notion alternative with a built-in AI assistant.** Pages inside pages, block editing, templates, a daily page, page history, charts, and an AI that can summarize, draft and rewrite your notes, using Claude, ChatGPT, Gemini or a local Ollama model.
 
-Everything is in one file: **`margin-notebook.html`**. Pick the path that matches you.
+**[Try it live in your browser →](https://arukalahimateja.github.io/Margin/)** No install, no account, no server.
+
+![Margin: a page with nested headings, to-dos and the block sidebar](docs/screenshot.png)
+
+- **One file.** The whole app is `margin-notebook.html`. Download it, double-click it, done.
+- **Local-first.** Notes stay in your browser. There is no Margin server and no telemetry.
+- **Bring your own AI.** Gemini (free tier), OpenAI, Anthropic, or Ollama running on your own machine.
+- **Lives inside Claude, too.** Publish it as a Claude artifact and your notes sync through your Claude account, with the AI running on your Claude plan.
 
 ---
 
-## Path A: you use Claude (claude.ai)
+## Two ways to run it
 
-This is the best option. Your notes are saved to your Claude account and sync across your devices, and the AI runs on your Claude plan with no extra setup.
+### Path A: inside Claude (claude.ai)
+
+Your notes are saved to your Claude account and sync across your devices. The AI runs on your Claude plan with no API key.
 
 1. Open a new chat at claude.ai.
 2. Attach `margin-notebook.html`.
@@ -16,42 +25,74 @@ This is the best option. Your notes are saved to your Claude account and sync ac
 
    > Publish this file as an artifact with the db, user, sample, downloads and assets capabilities.
 
-4. Open the artifact Claude creates. Pin it or bookmark it so you can find it again.
+4. Open the artifact Claude creates. Pin or bookmark it.
 5. The first time you use an AI feature, Claude asks permission. Allow it.
 
-How to check it worked: the bottom-left of the sidebar should say **"Saved to your account."** If it says "Saved in this browser only," the features weren't turned on. Repeat step 3 in the same chat.
+To check it worked, the bottom-left of the sidebar should say **"Saved to your account."** If it says "Saved in this browser only," the capabilities weren't turned on; repeat step 3 in the same chat.
 
----
+### Path B: in any browser
 
-## Path B: you don't use Claude
+Use the **[live link](https://arukalahimateja.github.io/Margin/)**, or download `margin-notebook.html` and double-click it. Notes are saved in that browser.
 
-Your notes are saved in your browser. The AI works with a provider you choose.
-
-### 1. Open it
-
-- **On a computer:** double-click `margin-notebook.html`. It opens in your browser. Bookmark it.
-- **On a phone:** use the link I sent you instead of the file: `[PASTE HOSTED LINK HERE]`
-
-### 2. Turn on the AI (optional)
-
-Open **Settings** in the sidebar, choose a provider, paste a key, then press **Test**.
+To turn on the AI, open **Settings** in the sidebar, choose a provider, paste a key, then press **Test**.
 
 | Provider | Cost | Where to get a key |
 |---|---|---|
 | **Gemini** | Free tier | aistudio.google.com → *Get API key* |
-| **ChatGPT (OpenAI)** | Pay per use | platform.openai.com → *API keys* |
-| **Claude (Anthropic)** | Pay per use | console.anthropic.com → *API keys* |
-| **Ollama** | Free, runs on your computer | ollama.com. Start it with `OLLAMA_ORIGINS=*` |
+| **OpenAI** | Pay per use | platform.openai.com → *API keys* |
+| **Anthropic (Claude)** | Pay per use | console.anthropic.com → *API keys* |
+| **Ollama** | Free, runs on your computer | ollama.com, then see [Using Ollama](#using-ollama) below |
+| **Any OpenAI-compatible API** | Varies | OpenRouter, LM Studio, vLLM and others: paste the base URL ending in `/v1` |
 
-**Important:** a ChatGPT Plus or Claude Pro subscription does **not** include an API key. API keys are a separate account with separate billing. If you just want to try the AI, use **Gemini**, which is free.
+A ChatGPT Plus or Claude Pro subscription does **not** include an API key. API keys are a separate account with separate billing. To just try the AI, use Gemini.
 
-Your key stays in your browser and is only sent to the provider you picked.
+---
 
-### 3. Back up your notes
+## Using Ollama
 
-Your notes live only in this browser on this device. They are deleted if you clear your browsing data, and they won't appear on your other devices.
+Ollama refuses requests from web pages it doesn't recognize, so you have to tell it which page may connect. Set `OLLAMA_ORIGINS`, then **fully quit and restart Ollama**.
 
-- **Settings → Export notes** about once a week, and keep the file somewhere safe. Backups hold your text, not images or attached files.
+**For the live link**, allow only that site:
+
+- **Windows** (PowerShell), then quit Ollama from the system tray and start it again:
+  ```powershell
+  setx OLLAMA_ORIGINS "https://arukalahimateja.github.io"
+  ```
+- **macOS** (Ollama app), then quit and reopen the app:
+  ```bash
+  launchctl setenv OLLAMA_ORIGINS "https://arukalahimateja.github.io"
+  ```
+- **Linux** (systemd): run `sudo systemctl edit ollama.service`, add the lines below, then `sudo systemctl restart ollama`:
+  ```ini
+  [Service]
+  Environment="OLLAMA_ORIGINS=https://arukalahimateja.github.io"
+  ```
+- **Running `ollama serve` by hand:**
+  ```bash
+  OLLAMA_ORIGINS="https://arukalahimateja.github.io" ollama serve
+  ```
+
+**For the downloaded file** (opened as `file://`), the browser sends no usable origin, so use `OLLAMA_ORIGINS=*` in the commands above. Be aware that `*` lets *any* website you visit talk to your local Ollama while it's running; switch it back when you're done if that matters to you.
+
+Then pull a model (for example `ollama pull llama3.2`), open **Settings → Ollama**, type the model name and press **Test**.
+
+**Browser note:** Chrome, Edge and Firefox allow the live site to reach `http://localhost:11434`. Safari may block it; if Test fails in Safari, try another browser or the downloaded file.
+
+---
+
+## Privacy and your API keys
+
+- Your notes and your API key are stored in your browser's local storage. Nothing is sent to any Margin server, because there isn't one.
+- When you use an AI feature, the text you send goes **directly from your browser to the provider you chose** (Google, OpenAI, Anthropic, an OpenAI-compatible server you set, or your own Ollama), and to no one else.
+- The only other network requests: the page loads its fonts from Google Fonts, and **Export page as PDF** loads the jsPDF library from cdnjs the first time you use it. Neither receives your notes.
+- Don't take this on trust: it's one HTML file. Search it for `fetch(` and `https://` to see every network call it makes.
+- Anyone who can use your browser profile can read the stored key. On a shared computer, use a key with a spending limit, or Ollama.
+
+## Back up your notes (Path B)
+
+Browser-only notes are deleted if you clear your browsing data, and they don't appear on your other devices.
+
+- **Settings → Export notes** about once a week. Backups hold your text, not images or attached files.
 - **Settings → Import backup** restores your notes, or moves them to a new device.
 
 ---
@@ -64,8 +105,8 @@ Your notes live only in this browser on this device. They are deleted if you cle
 - **Ctrl/⌘ K** searches all your pages. **Ctrl/⌘ J** opens the AI panel.
 - Drag the **⋮⋮** handle to move a block, or tap it for more options.
 - **Today** in the sidebar opens a page for the day, with yesterday's unfinished to-dos carried over.
-- **Templates** in the sidebar start a meeting, idea, project or reading page. Any page can become a template from its **⋯** menu.
-- In the AI panel, switch to **Make changes** and describe what you want, like "turn this into a task list". The AI proposes the changes, and nothing happens until you tick and apply them. One click undoes the whole set.
+- **Templates** start a meeting, idea, project or reading page. Any page can become a template from its **⋯** menu.
+- In the AI panel, switch to **Make changes** and describe what you want, like "turn this into a task list". The AI proposes changes, nothing happens until you tick and apply them, and one click undoes the whole set.
 - Paste or drag an image or file into a page, or type **/image** or **/file**.
 - Ask the AI for a graph ("plot sin(x) and cos(x)", "bar chart of these numbers") and Margin draws a real chart. Type **/chart** to make one yourself.
 - **⋯ → Export page as PDF** makes a PDF of the page. It covers English and Western European text; emoji and other scripts are left out. Outside Claude, **⋯ → Print** gives a full copy.
@@ -75,8 +116,8 @@ Your notes live only in this browser on this device. They are deleted if you cle
 
 Only for Path A copies (published inside Claude). The browser-only copy can't be reached from a terminal.
 
-1. Ask me for the `SKILL.md` file of the **/margin-add** skill.
-2. Open it and replace the line that starts with `- **Artifact URL:**` with your own Margin link. Open your Margin in Claude, then use **Share → Copy link**.
+1. Copy [`skills/margin-add/SKILL.md`](skills/margin-add/SKILL.md) from this repo.
+2. Replace `PASTE-YOUR-MARGIN-ARTIFACT-LINK-HERE` with your own Margin link. Open your Margin in Claude, then use **Share → Copy link**.
 3. Save it as `~/.claude/skills/margin-add/SKILL.md`, start a new Claude Code session, and run `/login` with your claude.ai account. It doesn't work with an API key.
 4. Use it like this:
 
@@ -87,11 +128,17 @@ Only for Path A copies (published inside Claude). The browser-only copy can't be
 
 It finds the page by title, adds your text, files or images as proper blocks, and leaves the rest of the page alone. It works in interactive Claude Code sessions only, not in `claude -p` scripts. If the page is open in Margin while it writes, click outside the text or reload to see the change.
 
-## Something's wrong?
+## Troubleshooting
 
 - **"The provider rejected the API key"**: the key was pasted incorrectly or has expired. Make a new one.
 - **"Doesn't recognize that model name"**: open Settings and type a current model name from the provider's website.
-- **"Couldn't reach Ollama"**: make sure Ollama is running and was started with `OLLAMA_ORIGINS=*`.
+- **"Couldn't reach Ollama"**: make sure Ollama is running and was restarted after setting `OLLAMA_ORIGINS` (see [Using Ollama](#using-ollama)). In Safari, try another browser.
 - **My notes disappeared**: you're probably in a different browser, a private window, or on a different device. Open the original, or import your last backup.
 
-This is an early version. Tell me what breaks or what you wish it did.
+## Contributing
+
+This is an early version. Bug reports and ideas are welcome in [Issues](https://github.com/ArukalaHimateja/Margin/issues).
+
+## License
+
+[MIT](LICENSE)
