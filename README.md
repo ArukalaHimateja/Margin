@@ -76,7 +76,9 @@ Ollama refuses requests from web pages it doesn't recognize, so you have to tell
 
 Then pull a model (for example `ollama pull llama3.2`), open **Settings → Ollama**, type the model name and press **Test**.
 
-**Browser note:** Chrome, Edge and Firefox allow the live site to reach `http://localhost:11434`. Safari may block it; if Test fails in Safari, try another browser or the downloaded file.
+**Allow the browser prompt.** Chrome, Edge, Brave and Opera ask before a website may talk to apps on your computer. When you press **Test**, choose **Allow**. If you dismissed or blocked it, click the icon to the left of the address bar, set **Apps on device** (older versions: **Local network access**) to **Allow**, and reload. Setting `OLLAMA_ORIGINS` alone is not enough; both are needed.
+
+Safari may block the live site from reaching `localhost` entirely. If Test fails in Safari, use another browser or the downloaded file.
 
 ---
 
@@ -132,7 +134,7 @@ It finds the page by title, adds your text, files or images as proper blocks, an
 
 - **"The provider rejected the API key"**: the key was pasted incorrectly or has expired. Make a new one.
 - **"Doesn't recognize that model name"**: open Settings and type a current model name from the provider's website.
-- **"Couldn't reach Ollama"**: make sure Ollama is running and was restarted after setting `OLLAMA_ORIGINS` (see [Using Ollama](#using-ollama)). In Safari, try another browser.
+- **"Couldn't reach Ollama"**: allow the browser's "apps on device" prompt (or re-enable it from the icon left of the address bar), and make sure Ollama is running and was restarted after setting `OLLAMA_ORIGINS`. See [Using Ollama](#using-ollama). In Safari, try another browser.
 - **My notes disappeared**: you're probably in a different browser, a private window, or on a different device. Open the original, or import your last backup.
 
 ## Contributing

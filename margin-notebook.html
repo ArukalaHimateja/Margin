@@ -1497,7 +1497,8 @@ async function byoCall(input, opts = {}) {
     pick = j => { const cd = j.candidates && j.candidates[0]; if (!cd) return ""; const t = (cd.content && cd.content.parts || []).map(x => x.text || "").join(""); return cd.finishReason === "MAX_TOKENS" ? { text: t, trunc: true } : t; };
   } else if (c.provider === "ollama") {
     url = base + "/api/chat"; kind = "ndjson";
-    body = { model, stream: true, messages: turns };
+    body = { model, stream: true, messages: turns, options: { num_ctx: 16384 } };
+    if (opts.schema) body.format = opts.schema;
     pick = j => (j.message && j.message.content) || "";
   } else {
     url = (c.provider === "openai" ? "https://api.openai.com/v1" : base) + "/chat/completions";
@@ -1531,7 +1532,12 @@ async function byoCall(input, opts = {}) {
   if (!text.trim()) throw { code: "empty_completion" };
   return { text, truncated: trunc };
 }
-function aiCall(input, opts) { return AI.mode === "claude" ? AI.sample(input, opts) : byoCall(input, { signal: opts && opts.signal, onText: opts && opts.onText }); }
+function aiCall(input, opts) { return AI.mode === "claude" ? AI.sample(input, opts) : byoCall(input, { signal: opts && opts.signal, onText: opts && opts.onText, schema: opts && opts.schema }); }
+const PLAN_SCHEMA = { type: "object", required: ["summary", "actions"], properties: {
+  summary: { type: "string" },
+  actions: { type: "array", items: { type: "object", required: ["op"], properties: {
+    op: { type: "string", enum: ["add_blocks", "create_page", "replace_content", "rename_page", "move_page"] },
+    page: { type: "string" }, title: { type: "string" }, icon: { type: "string" }, parent: { type: "string" }, markdown: { type: "string" } } } } } };
 function needSetup() { if (AI.ok) return false; if (!IN_CLAUDE) openSettings(); return true; }
 
 /* settings */
@@ -1596,7 +1602,10 @@ function aiErr(e) {
   if (c === "not_setup") return "Choose an AI provider in Settings first.";
   if (c === "bad_key") return "The provider rejected the API key. Check it in Settings.";
   if (c === "bad_model") return "The provider doesn't recognize that model name. Fix it in Settings.";
-  if (c === "network") return aiConf().provider === "ollama" ? "Couldn't reach Ollama. Make sure it's running with OLLAMA_ORIGINS=* set." : "Couldn't reach the provider. Check your connection and the server address.";
+  if (c === "network") return aiConf().provider === "ollama" ? (location.protocol === "file:"
+      ? "Couldn't reach Ollama. Make sure it's running, and that it was restarted after setting OLLAMA_ORIGINS=*."
+      : "Couldn't reach Ollama. If your browser asked to connect to apps or devices on this computer, choose Allow. If you blocked it, click the icon left of the address bar, allow “Apps on device” (or “Local network access”), and reload. Also check Ollama is running and was restarted after setting OLLAMA_ORIGINS=" + location.origin + ".")
+    : "Couldn't reach the provider. Check your connection and the server address.";
   if (c === "provider_error") return "The provider returned an error" + (e.message ? ": " + e.message : ".");
   return AI.name + " couldn't finish. Try again.";
 }
@@ -2619,9 +2628,9 @@ async function aiAct(q) {
   AI.busy = true; AI.ctl = new AbortController(); setComposer(); aiBusy(true);
   md.innerHTML = '<span class="thinking">' + MARKJS + 'Planning…</span>';
   try {
-    const r = await aiCall(prompt, { cache: false, signal: AI.ctl.signal });
+    const r = await aiCall(prompt, { cache: false, signal: AI.ctl.signal, schema: PLAN_SCHEMA });
     const plan = parseLoose(r.text);
-    if (!plan || !Array.isArray(plan.actions)) { md.innerHTML = ""; note(el, AI.name + " didn't return a plan I could read. Try again, or rephrase the request."); chat.pop(); return; }
+    if (!plan || !Array.isArray(plan.actions)) { console.warn("Margin: unreadable plan from " + AI.name + ":\n" + r.text); md.innerHTML = ""; note(el, AI.name + " didn't return a plan I could read. Try again, or rephrase the request."); chat.pop(); return; }
     if (!plan.actions.length) {
       const entry = { role: "assistant", content: String(plan.summary || "No changes needed.") };
       chat.push(entry); md.innerHTML = mdHtml(entry.content); addActs(el, chat.length - 1); return;
