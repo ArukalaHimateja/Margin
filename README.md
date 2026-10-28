@@ -11,6 +11,22 @@
 - **Bring your own AI.** Gemini (free tier), OpenAI, Anthropic, or Ollama running on your own machine.
 - **Lives inside Claude, too.** Publish it as a Claude artifact and your notes sync through your Claude account, with the AI running on your Claude plan.
 
+### Not yet
+
+Margin is an early version. If you're coming from Notion, these are missing today:
+
+- **Tables and databases.** No table block, no database rows-as-pages, views, filters or relations. This is the top item on the roadmap.
+- **Web links in text.** You can link pages to each other with `[[`, but not turn text into a link to a website.
+- **Sync and sharing outside Claude.** In the browser version, notes live in one browser on one device. No sharing, no real-time collaboration, no comments.
+- **Import from Notion.** You can export to Markdown and back up to JSON, but not import a Notion export.
+- **Layout and styling.** No multi-column layouts, page covers, text colors, highlights or underline.
+- **Embeds.** No YouTube, tweet, map or web-bookmark blocks. Images, files and charts work.
+- **Math and diagrams.** No equations or Mermaid diagrams.
+- **Dates and mentions.** No `@` mentions of dates or people, and no reminders.
+- **Editing many blocks at once.** You can't select several blocks to move or delete them together.
+
+If one of these is a dealbreaker for you, say so in [Issues](https://github.com/ArukalaHimateja/Margin/issues). That's how I decide what comes next.
+
 ---
 
 ## Two ways to run it
