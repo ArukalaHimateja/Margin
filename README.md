@@ -45,6 +45,8 @@ Your notes are saved to your Claude account and sync across your devices. The AI
 
 To check it worked, the bottom-left of the sidebar should say **"Saved to your account."** If it says "Saved in this browser only," the capabilities weren't turned on; repeat step 3 in the same chat.
 
+If the **Claude** button is missing from the top bar, the AI capability wasn't turned on. In the same chat, ask Claude to republish it with the sample capability.
+
 ### Path B: in any browser
 
 Use the **[live link](https://arukalahimateja.github.io/Margin/)**, or download `margin-notebook.html` and double-click it. Notes are saved in that browser.

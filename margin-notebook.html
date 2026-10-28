@@ -1600,7 +1600,7 @@ async function byoCall(input, opts = {}) {
   if (!text.trim()) throw { code: "empty_completion" };
   return { text, truncated: trunc };
 }
-function aiCall(input, opts) { return AI.mode === "claude" ? AI.sample(input, opts) : byoCall(input, { signal: opts && opts.signal, onText: opts && opts.onText, schema: opts && opts.schema }); }
+function aiCall(input, opts) { if (AI.mode === "claude") { const { schema, ...rest } = opts || {}; return AI.sample(input, rest); } return byoCall(input, { signal: opts && opts.signal, onText: opts && opts.onText, schema: opts && opts.schema }); }
 const PLAN_SCHEMA = { type: "object", required: ["summary", "actions"], properties: {
   summary: { type: "string" },
   actions: { type: "array", items: { type: "object", required: ["op"], properties: {
@@ -1681,7 +1681,7 @@ function aiErr(e) {
 /* markdown <-> blocks */
 function inlineMd(t) {
   return escH(t)
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<i>$2</i>")
