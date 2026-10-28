@@ -1190,7 +1190,8 @@ main.addEventListener("click", e => {
   const pl = t.closest && t.closest("a.plink");
   if (pl) { e.preventDefault(); if (S.pages.has(pl.dataset.page)) go(pl.dataset.page); else toast("That page was deleted."); return; }
   const xl = t.closest && t.closest("a.xlink");
-  if (xl && getSelection().isCollapsed) { e.preventDefault(); const w = window.open(xl.href, "_blank", "noopener,noreferrer"); if (!w && !IN_CLAUDE) location.href = xl.href; return; }
+  // Open in a new tab through a real link click. window.open with "noopener" always returns null, so it can't tell success from a blocked popup.
+  if (xl && getSelection().isCollapsed) { e.preventDefault(); const a = document.createElement("a"); a.href = xl.href; a.target = "_blank"; a.rel = "noopener noreferrer"; document.body.appendChild(a); a.click(); a.remove(); return; }
   const ta = t.closest(".toc a");
   if (ta) { e.preventDefault(); const h = $(`.blk[data-id="${ta.dataset.to}"]`); if (h) h.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); return; }
   const chk = t.closest(".chk");
