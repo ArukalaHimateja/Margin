@@ -4,7 +4,7 @@
 
 **[Try it live in your browser →](https://arukalahimateja.github.io/Margin/)** No install, no account, no server.
 
-![Margin: a page with nested headings, to-dos and the block sidebar](docs/screenshot.png)
+![Margin: dragging a block to reorder it, then using the AI panel's Make changes to turn a page into a task list](docs/demo.gif)
 
 - **One file.** The whole app is `margin-notebook.html`. Download it, double-click it, done.
 - **Local-first.** Notes stay in your browser. There is no Margin server and no telemetry.
