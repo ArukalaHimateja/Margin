@@ -78,6 +78,8 @@ Then pull a model (for example `ollama pull llama3.2`), open **Settings → Olla
 
 **Allow the browser prompt.** Chrome, Edge, Brave and Opera ask before a website may talk to apps on your computer. When you press **Test**, choose **Allow**. If you dismissed or blocked it, click the icon to the left of the address bar, set **Apps on device** (older versions: **Local network access**) to **Allow**, and reload. Setting `OLLAMA_ORIGINS` alone is not enough; both are needed.
 
+**Pick a model big enough for the job.** Answer mode (summarize, draft, rewrite) works with small models like `llama3.2`. **Make changes**, which plans edits across pages, needs a 7B+ model such as `qwen2.5:7b`; smaller models tend to propose one rewrite instead of the steps you asked for. Either way, review each step and its preview before you press **Apply**. Nothing changes until you do, and one click undoes it.
+
 Safari may block the live site from reaching `localhost` entirely. If Test fails in Safari, use another browser or the downloaded file.
 
 ---
