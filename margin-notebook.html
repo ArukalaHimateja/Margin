@@ -244,6 +244,11 @@ svg{display:block}
 #fmt{display:flex;padding:3px;gap:1px}
 #fmt button{min-width:32px;height:30px;border-radius:6px;font-size:14px;padding:0 6px}
 #fmt button:hover{background:var(--hover)}
+#linkbox{display:none;align-items:center;padding:0 2px}
+#fmt.linking>button{display:none}
+#fmt.linking #linkbox{display:flex}
+#linkin{width:min(300px,70vw);height:30px;border:0;outline:none;background:transparent;font:inherit;font-size:14px;color:var(--ink);padding:0 6px}
+.xlink{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;cursor:pointer}
 
 /* ---------- find ---------- */
 #find{position:fixed;inset:0;z-index:60;background:rgba(15,18,22,.32);display:flex;justify-content:center;align-items:flex-start;padding:12vh 16px 16px}
@@ -509,6 +514,8 @@ body.ai-open #app{grid-template-columns:264px minmax(0,1fr) 380px}
   <button data-f="italic" aria-label="Italic" style="font-style:italic;font-family:var(--f-display)">i</button>
   <button data-f="strikeThrough" aria-label="Strikethrough" style="text-decoration:line-through">S</button>
   <button data-f="code" aria-label="Inline code" style="font-family:var(--f-mono);font-size:12px">&lt;/&gt;</button>
+  <button data-f="link" aria-label="Link to a website" style="font-size:13px;font-weight:600">Link</button>
+  <form id="linkbox" autocomplete="off"><input id="linkin" type="text" inputmode="url" aria-label="Link address" placeholder="Paste a link, or leave empty to remove"></form>
   <button data-f="ai" aria-label="Ask Claude about the selection" hidden>Claude</button>
 </div>
 <div id="find" hidden>
@@ -770,6 +777,7 @@ function clean(html) {
       const tag = MAP[n.tagName.toLowerCase()] || n.tagName.toLowerCase();
       const pid = tag === "a" && n.getAttribute("data-page");
       if (pid && /^[\w-]{1,80}$/.test(pid)) { const e = document.createElement("a"); e.className = "plink"; e.setAttribute("data-page", pid); e.setAttribute("href", "#p-" + pid); e.textContent = n.textContent; n.replaceWith(e); }
+      else if (tag === "a" && linkUrl(n.getAttribute("href") || "")) { const e = document.createElement("a"); e.className = "xlink"; e.setAttribute("href", linkUrl(n.getAttribute("href"))); e.setAttribute("target", "_blank"); e.setAttribute("rel", "noopener noreferrer"); while (n.firstChild) e.appendChild(n.firstChild); n.replaceWith(e); walk(e); }
       else if (OK.includes(tag)) { const e = document.createElement(tag); while (n.firstChild) e.appendChild(n.firstChild); n.replaceWith(e); walk(e); }
       else { walk(n); const f = document.createDocumentFragment(); while (n.firstChild) f.appendChild(n.firstChild); n.replaceWith(f); }
     } else if (n.nodeType !== 3) n.remove();
@@ -779,6 +787,24 @@ function clean(html) {
   return d.textContent === "" && !d.querySelector("br + br") ? "" : d.innerHTML;
 }
 const plain = html => { const d = document.createElement("div"); d.innerHTML = html || ""; return d.textContent; };
+// Web links. linkUrl accepts http(s) and mailto, and turns a bare "example.com" into https://; anything else (javascript:, data:) is refused.
+function linkUrl(s) {
+  s = String(s || "").trim(); if (!s || /\s/.test(s)) return "";
+  if (/^(https?:\/\/|mailto:)/i.test(s)) return s;
+  if (/^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}([/?#][^\s]*)?$/i.test(s)) return "https://" + s;
+  return "";
+}
+const URL_RE = /\bhttps?:\/\/[^\s<]+[^\s<.,;:!?)\]'"]/g;
+const linkify = escaped => escaped.replace(URL_RE, u => '<a href="' + u + '">' + u + "</a>");
+function decorateLinks(el) {
+  el.querySelectorAll("a[href]:not(.plink)").forEach(a => {
+    const u = linkUrl(a.getAttribute("href"));
+    if (!u) { a.replaceWith(...a.childNodes); return; }
+    a.className = "xlink"; a.setAttribute("href", u); a.target = "_blank"; a.rel = "noopener noreferrer";
+  });
+}
+// Plain text for the AI, keeping web links as [text](url) so rewrites don't drop them.
+const plainL = html => { const d = document.createElement("div"); d.innerHTML = html || ""; d.querySelectorAll("a[href]:not(.plink)").forEach(a => { const u = linkUrl(a.getAttribute("href")); a.replaceWith(u ? "[" + a.textContent + "](" + u + ")" : a.textContent); }); return d.textContent; };
 function caretOff(el) {
   const s = getSelection(); if (!s.rangeCount) return 0;
   const r = s.getRangeAt(0); if (!el.contains(r.startContainer)) return 0;
@@ -1127,6 +1153,16 @@ main.addEventListener("paste", e => {
   if (el.id === "title") { document.execCommand("insertText", false, text.replace(/\s*\n\s*/g, " ")); return; }
   const b = blk(el.closest(".blk").dataset.id);
   const lines = text.replace(/\r/g, "").split("\n");
+  if (b.type !== "code" && lines.length === 1 && /^(https?:\/\/|www\.)\S+$/i.test(lines[0].trim())) {
+    const u = linkUrl(lines[0].trim());
+    if (!getSelection().isCollapsed) document.execCommand("createLink", false, u);
+    else document.execCommand("insertHTML", false, '<a href="' + escH(u) + '">' + escH(lines[0].trim()) + "</a>");
+    decorateLinks(el); sync(el); return;
+  }
+  if (b.type !== "code" && lines.length === 1 && URL_RE.test(lines[0])) {
+    URL_RE.lastIndex = 0; document.execCommand("insertHTML", false, linkify(escH(lines[0]))); decorateLinks(el); sync(el); return;
+  }
+  URL_RE.lastIndex = 0;
   if (el.classList.contains("tbody") || b.type === "code" || lines.length === 1) {
     lines.forEach((ln, k) => { if (k) lineBreak(); if (ln) document.execCommand("insertText", false, ln); });
     sync(el); return;
@@ -1143,16 +1179,18 @@ main.addEventListener("paste", e => {
 function parseLine(ln) {
   const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const m = ln.match(/^\s*(#{1,3}|[-*•]|\d+[.)]|\[ ?\]|\[x\]|>)\s+(.*)$/i);
-  if (!m) return { id: uid("b"), type: "p", html: esc(ln) };
+  if (!m) return { id: uid("b"), type: "p", html: linkify(esc(ln)) };
   const k = m[1].toLowerCase();
   const t = k === "#" ? "h1" : k === "##" ? "h2" : k === "###" ? "h3" : /^[-*•]$/.test(k) ? "bullet" : /^\d/.test(k) ? "num" : k === ">" ? "quote" : "todo";
-  const nb = { id: uid("b"), type: t, html: esc(m[2]) }; if (k === "[x]") nb.checked = true; return nb;
+  const nb = { id: uid("b"), type: t, html: linkify(esc(m[2])) }; if (k === "[x]") nb.checked = true; return nb;
 }
 
 main.addEventListener("click", e => {
   const t = e.target;
   const pl = t.closest && t.closest("a.plink");
   if (pl) { e.preventDefault(); if (S.pages.has(pl.dataset.page)) go(pl.dataset.page); else toast("That page was deleted."); return; }
+  const xl = t.closest && t.closest("a.xlink");
+  if (xl && getSelection().isCollapsed) { e.preventDefault(); const w = window.open(xl.href, "_blank", "noopener,noreferrer"); if (!w && !IN_CLAUDE) location.href = xl.href; return; }
   const ta = t.closest(".toc a");
   if (ta) { e.preventDefault(); const h = $(`.blk[data-id="${ta.dataset.to}"]`); if (h) h.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); return; }
   const chk = t.closest(".chk");
@@ -1331,6 +1369,7 @@ icons.addEventListener("click", e => {
 /* ---------------- format toolbar ---------------- */
 const fmt = $("#fmt");
 document.addEventListener("selectionchange", () => {
+  if (LINK.open) return;
   const s = getSelection();
   if (!s.rangeCount || s.isCollapsed) { fmt.hidden = true; aimenu.hidden = true; return; }
   const n = s.anchorNode; const host = n && (n.nodeType === 1 ? n : n.parentElement);
@@ -1346,10 +1385,39 @@ function placeFmt() {
   let y = r.top - fmt.offsetHeight - 8; if (y < 8) y = r.bottom + 8;
   fmt.style.left = x + "px"; fmt.style.top = y + "px";
 }
-fmt.addEventListener("mousedown", e => e.preventDefault());
+fmt.addEventListener("mousedown", e => { if (!e.target.closest("#linkbox")) e.preventDefault(); });
+const LINK = { open: false, range: null };
+function openLinkBox() {
+  const s = getSelection(); if (!s.rangeCount || s.isCollapsed) return;
+  LINK.range = s.getRangeAt(0).cloneRange(); LINK.open = true;
+  const c = LINK.range.commonAncestorContainer, host = c.nodeType === 1 ? c : c.parentElement;
+  const ex = host && host.closest("a.xlink");
+  $("#linkin").value = ex ? ex.getAttribute("href") : "";
+  fmt.classList.add("linking"); $("#linkin").focus(); $("#linkin").select();
+}
+function closeLinkBox(restore) {
+  LINK.open = false; fmt.classList.remove("linking");
+  if (!restore || !LINK.range) return null;
+  const c = LINK.range.commonAncestorContainer, host = c.nodeType === 1 ? c : c.parentElement, txt = host && host.closest(".txt");
+  if (!txt) return null;
+  txt.focus(); const s = getSelection(); s.removeAllRanges(); s.addRange(LINK.range); return txt;
+}
+$("#linkbox").addEventListener("submit", e => {
+  e.preventDefault(); const raw = $("#linkin").value, url = linkUrl(raw);
+  if (raw.trim() && !url) { toast("That doesn't look like a web address."); return; }
+  const txt = closeLinkBox(true); if (!txt) return;
+  const s = getSelection(), c = s.anchorNode, host = c && (c.nodeType === 1 ? c : c.parentElement), ex = host && host.closest("a.xlink");
+  if (ex && !url) { ex.replaceWith(...ex.childNodes); }
+  else if (!url) document.execCommand("unlink");
+  else document.execCommand("createLink", false, url);
+  decorateLinks(txt); sync(txt); fmt.hidden = true;
+});
+$("#linkin").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeLinkBox(true); placeFmt(); } });
+$("#linkin").addEventListener("blur", () => setTimeout(() => { if (LINK.open && document.activeElement !== $("#linkin")) { LINK.open = false; fmt.classList.remove("linking"); fmt.hidden = true; } }, 150));
 fmt.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.f === "code") { toggleCode(); return; }
+  if (b.dataset.f === "link") { openLinkBox(); return; }
   if (b.dataset.f === "ai") { aimenu.hidden = false; const r = fmt.getBoundingClientRect(); placeNear(aimenu, r); return; }
   document.execCommand(b.dataset.f);
   const s = getSelection(); const n = s.anchorNode; const host = n && (n.nodeType === 1 ? n : n.parentElement);
@@ -1613,6 +1681,7 @@ function aiErr(e) {
 /* markdown <-> blocks */
 function inlineMd(t) {
   return escH(t)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, '<a href="$2">$1</a>')
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<i>$2</i>")
@@ -1661,14 +1730,14 @@ function mdHtml(md) {
 }
 function blocksMd(blocks, markIdx = -1) {
   return blocks.map((b, i) => {
-    const t = plain(b.html); let s;
+    const t = plainL(b.html); let s;
     switch (b.type) {
       case "h1": s = "# " + t; break; case "h2": s = "## " + t; break; case "h3": s = "### " + t; break;
       case "bullet": s = "- " + t; break; case "num": s = "1. " + t; break;
       case "todo": s = "- [" + (b.checked ? "x" : " ") + "] " + t; break;
       case "quote": s = "> " + t; break; case "callout": s = "> " + (b.icon || "💡") + " " + t; break;
       case "code": s = "```\n" + t + "\n```"; break; case "divider": s = "---"; break;
-      case "toggle": s = "▸ " + t + (plain(b.body) ? "\n  " + plain(b.body) : ""); break;
+      case "toggle": s = "▸ " + t + (plain(b.body) ? "\n  " + plainL(b.body) : ""); break;
       case "page": { const c = S.pages.get(b.page); s = "[Subpage: " + (c ? (c.title || "Untitled") : "deleted") + "]"; break; }
       case "toc": s = "[Table of contents]"; break;
       case "image": s = "[Image" + (t ? ": " + t : b.name ? ": " + b.name : "") + "]"; break;
@@ -2100,6 +2169,7 @@ function htmlToMd(html) {
     if (t === "code") return "`" + inner + "`";
     if (t === "br") return "\n";
     if (t === "a" && c.dataset.page) return "[[" + inner + "]]";
+    if (t === "a" && linkUrl(c.getAttribute("href"))) return "[" + inner + "](" + linkUrl(c.getAttribute("href")) + ")";
     return inner;
   }).join("");
   return walk(d);
