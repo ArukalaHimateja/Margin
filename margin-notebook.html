@@ -2621,10 +2621,10 @@ async function aiAct(q) {
     "Allowed actions:\n" +
     "{\"op\":\"add_blocks\",\"page\":\"<id>\",\"markdown\":\"...\"}  appends content to the end of a page\n" +
     "{\"op\":\"create_page\",\"title\":\"...\",\"icon\":\"<one emoji or empty>\",\"parent\":\"<id, or null for top level>\",\"markdown\":\"...\"}\n" +
-    "{\"op\":\"replace_content\",\"page\":\"<id>\",\"markdown\":\"...\"}  replaces a page's whole body; only when asked to rewrite, reorganize or convert a page, and keep everything worth keeping\n" +
+    "{\"op\":\"replace_content\",\"page\":\"<id>\",\"markdown\":\"...\"}  replaces a page's whole body; only when asked to rewrite, reorganize, split or convert a page, and keep everything worth keeping. Links to subpages are kept automatically\n" +
     "{\"op\":\"rename_page\",\"page\":\"<id>\",\"title\":\"...\"}\n" +
     "{\"op\":\"move_page\",\"page\":\"<id>\",\"parent\":\"<id, or null for top level>\"}\n" +
-    "Use only page ids from the list. In markdown use only # headings, - bullets, 1. numbered items, - [ ] to-dos, > quotes and ``` code. " + CHART_HELP + " Keep the plan as small as the request allows. If the request is a question rather than a change, answer it fully in summary (Markdown is fine there) and return an empty actions list. If no change is needed, return an empty actions list and say why in summary.";
+    "To split a page or move part of it into new pages: one create_page per new page with the source page as parent, plus one replace_content for the source page that keeps everything not moved and drops what was moved. Copy moved content exactly, including which to-dos are checked ([x] or [ ]). Use only page ids from the list. In markdown use only # headings, - bullets, 1. numbered items, - [ ] to-dos, > quotes and ``` code. " + CHART_HELP + " Keep the plan as small as the request allows. If the request is a question rather than a change, answer it fully in summary (Markdown is fine there) and return an empty actions list. If no change is needed, return an empty actions list and say why in summary.";
   AI.busy = true; AI.ctl = new AbortController(); setComposer(); aiBusy(true);
   md.innerHTML = '<span class="thinking">' + MARKJS + 'Planning…</span>';
   try {
@@ -2687,11 +2687,13 @@ function applyPlan(actions) {
   const before = new Map(), created = [];
   const keep = id => { const p = S.pages.get(id); if (p && !before.has(id)) { before.set(id, { title: p.title, icon: p.icon, parent: p.parent, blocks: JSON.parse(JSON.stringify(p.blocks)) }); snapNow(id, "Before an AI change"); } };
   let count = 0;
+  const rank = a => a.op === "replace_content" ? 0 : a.op === "rename_page" ? 1 : 2;
+  actions = actions.map((a, i) => [a, i]).sort((x, y) => rank(x[0]) - rank(y[0]) || x[1] - y[1]).map(x => x[0]);
   actions.forEach(a => {
     if (!checkAction(a).ok) return;
     const blocks = () => { const bl = mdToBlocks(a.markdown || ""); return bl.length ? bl : [{ id: uid("b"), type: "p", html: "" }]; };
     if (a.op === "add_blocks") { const id = resolvePage(a.page); keep(id); insertBlocksAtEnd(S.pages.get(id), mdToBlocks(a.markdown)); touch(id); }
-    else if (a.op === "replace_content") { const id = resolvePage(a.page); keep(id); S.pages.get(id).blocks = [...blocks(), { id: uid("b"), type: "p", html: "" }]; touch(id); }
+    else if (a.op === "replace_content") { const id = resolvePage(a.page); keep(id); const pl = S.pages.get(id).blocks.filter(b => b.type === "page" && S.pages.has(b.page)); S.pages.get(id).blocks = [...blocks(), ...pl, { id: uid("b"), type: "p", html: "" }]; touch(id); }
     else if (a.op === "rename_page") { const id = resolvePage(a.page); keep(id); S.pages.get(id).title = String(a.title).slice(0, 200); touch(id); }
     else if (a.op === "create_page") {
       const par = a.parent && a.parent !== "null" ? resolvePage(a.parent) : null;
